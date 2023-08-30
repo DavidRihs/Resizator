@@ -10,23 +10,25 @@ namespace Resizator
 {
     public class Settings
     {
-        private static readonly string localAppDataPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Resizator", "settings.txt");
+        private static readonly string localAppDataDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Resizator");
+        private static readonly string localAppDataFile = System.IO.Path.Combine(localAppDataDir, "settings.txt");
 
-        public string? Percent { get; private set; } = null;
-        public string? Path { get; private set; } = null;
+        public string? Percent { get; set; } = "20";
+        public string? Path { get; set; } = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
-        private Settings() { }
-        
-        public static Settings INSTANCE { get; private set; } = new();
-
-        public static void Load()
+        public static Settings Load()
         {
-            INSTANCE = JsonSerializer.Deserialize<Settings>(File.ReadAllText(localAppDataPath));
+            if(File.Exists(localAppDataFile))
+            {
+                return JsonSerializer.Deserialize<Settings>(File.ReadAllText(localAppDataFile)) ?? new Settings();
+            }
+            return new Settings();
         }
 
-        public static void Save()
+        public void Save()
         {
-            File.WriteAllText(localAppDataPath, JsonSerializer.Serialize(INSTANCE));
+            Directory.CreateDirectory(localAppDataDir);
+            File.WriteAllText(localAppDataFile, JsonSerializer.Serialize(this));
         }
     }
 }

@@ -19,39 +19,21 @@ namespace Resizator
     {
         string batchFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "resize.bat");
 
+        private readonly Settings settings = Settings.Load();
 
         public MainWindow()
         {
             InitializeComponent();
             Closing += MainWindowClosing;
-
-            Settings.Load();
-            if (Settings.INSTANCE.Percent is string percent)
-            {
-                tbxPercent.Text = percent;
-            }
-            else
-            {
-                tbxPercent.Text = App.DEFAULT_PERCENT;
-                App.AddOrUpdateSetting(App.KEY_PERCENT, App.DEFAULT_PERCENT);
-            }
-
-            if (App.GetSettingValue(App.KEY_PATH) is string path)
-            {
-                tbxPath.Text = path;
-            }
-            else
-            {
-                string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                tbxPath.Text = myDocumentsPath;
-                App.AddOrUpdateSetting(App.KEY_PATH, myDocumentsPath);
-            }
+            tbxPercent.Text = settings.Percent;
+            tbxPath.Text = settings.Path;
         }
 
         private void MainWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
-            App.AddOrUpdateSetting(App.KEY_PERCENT, tbxPercent.Text);
-            App.AddOrUpdateSetting(App.KEY_PATH, tbxPath.Text);
+            settings.Percent = tbxPercent.Text;
+            settings.Path = tbxPath.Text;
+            settings.Save();
         }
 
         private void OpenFileDialog(object sender, RoutedEventArgs e)
