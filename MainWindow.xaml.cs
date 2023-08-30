@@ -81,6 +81,7 @@ namespace Resizator
                 process.Close();
 
                 Compress();
+                WriteToConsole("Done !");
             }
             catch (Exception ex)
             {
