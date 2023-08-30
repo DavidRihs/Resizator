@@ -5,6 +5,10 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Forms;
 using System;
+using System.Globalization;
+using System.IO.Compression;
+using System.Threading;
+using System.Configuration;
 
 namespace Resizator
 {
@@ -13,17 +17,47 @@ namespace Resizator
     /// </summary>
     public partial class MainWindow : Window
     {
-        string batchFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "lib", "resize.bat");
+        string batchFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "resize.bat");
+
 
         public MainWindow()
         {
             InitializeComponent();
+            Closing += MainWindowClosing;
+
+            Settings.Load();
+            if (Settings.INSTANCE.Percent is string percent)
+            {
+                tbxPercent.Text = percent;
+            }
+            else
+            {
+                tbxPercent.Text = App.DEFAULT_PERCENT;
+                App.AddOrUpdateSetting(App.KEY_PERCENT, App.DEFAULT_PERCENT);
+            }
+
+            if (App.GetSettingValue(App.KEY_PATH) is string path)
+            {
+                tbxPath.Text = path;
+            }
+            else
+            {
+                string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                tbxPath.Text = myDocumentsPath;
+                App.AddOrUpdateSetting(App.KEY_PATH, myDocumentsPath);
+            }
+        }
+
+        private void MainWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            App.AddOrUpdateSetting(App.KEY_PERCENT, tbxPercent.Text);
+            App.AddOrUpdateSetting(App.KEY_PATH, tbxPath.Text);
         }
 
         private void OpenFileDialog(object sender, RoutedEventArgs e)
         {
             using var fbd = new FolderBrowserDialog();
-            fbd.RootFolder = System.Environment.SpecialFolder.MyDocuments;
+            fbd.RootFolder = Environment.SpecialFolder.MyDocuments;
             if(fbd.ShowDialog() == System.Windows.Forms.DialogResult.OK )
             {
                 tbxPath.Text = fbd.SelectedPath;
@@ -32,38 +66,80 @@ namespace Resizator
 
         private void Resize(object sender, RoutedEventArgs e)
         {
-            // Set up the process start info
-            ProcessStartInfo processStartInfo = new()
+            try
             {
-                CreateNoWindow= true,
-                FileName = $"cmd.exe",
-                Arguments = $" /C \"{batchFilePath}\" {tbxMaxWH.Text} \"{tbxPath.Text}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            };
+                tbxConsole.Clear();
+                decimal percent = decimal.Parse(tbxPercent.Text) / 100;
 
-            Debug.WriteLine($" /C \"{batchFilePath}\" {tbxMaxWH.Text} \"{tbxPath.Text}\"");
+                // Set up the process start info
+                ProcessStartInfo processStartInfo = new()
+                {
+                    CreateNoWindow = true,
+                    FileName = $"cmd.exe",
+                    Arguments = $" /C \"\"{batchFilePath}\" {percent.ToString("0.00", CultureInfo.InvariantCulture)} \"{tbxPath.Text}\"\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                };
 
-            // Start the process
-            using var process = Process.Start(processStartInfo);
+                Debug.WriteLine(processStartInfo.Arguments);
 
-            process.BeginErrorReadLine();
-            process.BeginOutputReadLine();
+                // Start the process
+                using var process = Process.Start(processStartInfo);
+                process.EnableRaisingEvents = true;
 
-            process.OutputDataReceived += ProcessOutput;
-            process.ErrorDataReceived += ProcessOutput;
+                process.OutputDataReceived += ProcessOutput;
+                process.ErrorDataReceived += ProcessOutput;
 
-            // Clean up
-            process.WaitForExit();
-            process.Close();
+                process.BeginErrorReadLine();
+                process.BeginOutputReadLine();
+
+                // Clean up
+                process.WaitForExit();
+                process.Close();
+
+                Compress();
+            }
+            catch (Exception ex)
+            {
+                tbxConsole.Text += $"ERROR: {ex.Message}\n";
+            }
         }
 
-        private void ProcessOutput(object sender, DataReceivedEventArgs e) => tbxConsole.Dispatcher.BeginInvoke(() => { tbxConsole.Text += e.Data; });
-
-        private void MaxWHPreviewTextInput(object sender, TextCompositionEventArgs e)
+        private void Compress()
         {
-            e.Handled = !Regex.IsMatch(e.Text, @"^\d$");
+            string outputFolder = Path.Combine(tbxPath.Text, "resized");
+            if (Directory.Exists(outputFolder))
+            {
+
+
+                string zipPath = Path.Combine(tbxPath.Text, "resized.zip");
+                WriteToConsole($"Compressing \"{outputFolder}\" into \"{zipPath}\"...");
+                if (File.Exists(zipPath))
+                {
+                    File.Delete(zipPath);
+                }
+                ZipFile.CreateFromDirectory(outputFolder, zipPath);
+
+                WriteToConsole($"Deleting \"{outputFolder}\"...");
+                Directory.Delete(outputFolder, true);
+            }
+        }
+
+        private void ProcessOutput(object sender, DataReceivedEventArgs e)
+        {
+            if(e.Data != null)
+            {
+                WriteToConsole(e.Data);
+            }
+        }
+
+        private void WriteToConsole(string txt) => tbxConsole.Dispatcher.BeginInvoke(() => { tbxConsole.Text += txt + "\n"; });
+
+        private void ValidatePercent(object sender, TextCompositionEventArgs e)
+        {
+            var newValue = tbxPercent.Text + e.Text;
+            e.Handled = !Regex.IsMatch(newValue, @"^[1-9][0-9]?$");
         }
     }
 }

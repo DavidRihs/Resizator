@@ -23,19 +23,19 @@
             <TextBlock
                 Grid.Column="0"
                 VerticalAlignment="Center"
-                Text="Max Height/Width:" />
+                Text="Percent:" />
             <TextBox
-                x:Name="tbxMaxWH"
+                x:Name="tbxPercent"
                 Grid.Column="1"
                 Margin="10,0,0,0"
                 HorizontalContentAlignment="Center"
                 VerticalContentAlignment="Center"
-                PreviewTextInput="MaxWHPreviewTextInput" />
+                PreviewTextInput="ValidatePercent" />
             <TextBlock
                 Grid.Column="2"
                 Margin="5,0,30,0"
                 VerticalAlignment="Center"
-                Text="px" />
+                Text="%" />
             <TextBlock
                 Grid.Column="3"
                 VerticalAlignment="Center"

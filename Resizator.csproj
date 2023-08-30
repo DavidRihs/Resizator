@@ -6,15 +6,23 @@
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>True</UseWindowsForms>
+    <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="lib\ffmpeg.exe">
+    <None Remove="lib\ffmpeg.exe" />
+    <None Remove="lib\resize.bat" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="lib\ffmpeg.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="lib\resize.bat">
+	  <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </Content>
+    <Content Include="lib\resize.bat">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+		<TargetPath>%(Filename)%(Extension)</TargetPath>
+    </Content>
   </ItemGroup>
 
 </Project>
